@@ -1,0 +1,57 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: php/Dockerfile
+    container_name: laravel_laundry
+    volumes:
+      - ./src:/src # Mount source code untuk init script
+      - ./laravel_laundry:/var/www/html # Mount aplikasi Laravel
+    ports:
+      - "8181:81" # Port 8000 di host ke port 80 di container
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_DATABASE: laravel_db
+      DB_USERNAME: laravel
+      DB_PASSWORD: secret
+      USER_ID: 1000
+      GROUP_ID: 1000
+    depends_on:
+      - mysql
+    networks:
+      - laravel
+
+  mysql:
+    image: mysql:8
+    container_name: mysql_laundry
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: laravel_db
+      MYSQL_USER: laravel
+      MYSQL_PASSWORD: secret
+    ports:
+      - "3310:3309"
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+    networks:
+      - laravel
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: laundry_phpmyadmin
+    restart: always
+    ports:
+      - "8001:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3309
+      MYSQL_ROOT_PASSWORD: root
+    depends_on:
+      - mysql
+    networks:
+      - laravel
+networks:
+  laravel:
+
+volumes:
+  mysql-data:
