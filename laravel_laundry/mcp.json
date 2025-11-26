@@ -1,0 +1,16 @@
+{
+    "servers": {
+        "laundry": {
+            "command": "php",
+            "args": [
+                "artisan",
+                "mcp:start",
+                "laundry"
+            ],
+            "cwd": ".",
+            "env": {
+                "LARAVEL_MCP_SERVER": "laundry"
+            }
+        }
+    }
+}

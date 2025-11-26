@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MCP Server Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; }
+        button { padding: 10px 20px; margin: 5px; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+        .response { margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Laundry App MCP Server Test</h1>
+
+    <div class="test-section">
+        <h3>Test MCP Connection</h3>
+        <button onclick="testMCP('listTools')">List Available Tools</button>
+        <button onclick="testMCP('listCustomers')">List Customers</button>
+        <button onclick="testMCP('listOrders')">List Orders</button>
+        <div id="response" class="response"></div>
+    </div>
+
+    <script>
+        const MCP_URL = 'http://localhost:8181/mcp/demo';
+
+        async function testMCP(type) {
+            const responseDiv = document.getElementById('response');
+            responseDiv.innerHTML = '<p>Loading...</p>';
+
+            let requestBody;
+
+            switch(type) {
+                case 'listTools':
+                    requestBody = {
+                        jsonrpc: "2.0",
+                        id: Date.now(),
+                        method: "tools/list"
+                    };
+                    break;
+                case 'listCustomers':
+                    requestBody = {
+                        jsonrpc: "2.0",
+                        id: Date.now(),
+                        method: "tools/call",
+                        params: {
+                            name: "customer_management",
+                            arguments: { action: "list" }
+                        }
+                    };
+                    break;
+                case 'listOrders':
+                    requestBody = {
+                        jsonrpc: "2.0",
+                        id: Date.now(),
+                        method: "tools/call",
+                        params: {
+                            name: "order_management",
+                            arguments: { action: "list" }
+                        }
+                    };
+                    break;
+            }
+
+            try {
+                const response = await fetch(MCP_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                const data = await response.json();
+
+                responseDiv.innerHTML = `
+                    <h4>Response:</h4>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+
+            } catch (error) {
+                responseDiv.innerHTML = `
+                    <h4>Error:</h4>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
