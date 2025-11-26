@@ -2,10 +2,18 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class UserOutlets extends Model
 {
+    use HasFactory;
+    public const ROLE_OWNER = 'owner';
+
+    public const ROLE_KARYAWAN = 'karyawan';
+
+    public const ROLE_KASIR = 'kasir';
+
     protected $table = 'user_outlets';
 
     protected $primaryKey = 'id';
@@ -14,7 +22,7 @@ class UserOutlets extends Model
         'user_id',
         'outlet_id',
         'role',
-        'permission_json',  
+        'permission_json',
         'is_active',
         'created_at',
         'updated_at',

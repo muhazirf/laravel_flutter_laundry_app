@@ -27,6 +27,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
         'phone',
         'email_verified_at',
         'remember_token',
+        'api_key',
     ];
 
     /**
@@ -79,8 +80,7 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     public function outlets()
     {
         return $this->belongsToMany(Outlets::class, 'user_outlets', 'user_id', 'outlet_id')
-                    ->withPivot('role', 'permission_json', 'is_active')
-                    ->withTimestamps();
+            ->withPivot('role', 'permission_json', 'is_active')
+            ->withTimestamps();
     }
-
 }

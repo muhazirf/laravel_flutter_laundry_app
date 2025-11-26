@@ -12,7 +12,7 @@ class Outlets extends Model
 
     protected $fillable = [
         'name',
-        'ownerr_user_id',
+        'owner_user_id',
         'address',
         'phone',
         'is_active',
