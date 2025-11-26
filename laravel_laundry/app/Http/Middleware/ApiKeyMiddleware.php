@@ -1,9 +1,10 @@
 <?php
+
 namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use App\Models\User;
+use App\Models\Users;
 use Symfony\Component\HttpFoundation\Response;
 
 class ApiKeyMiddleware
@@ -16,7 +17,7 @@ class ApiKeyMiddleware
             return response()->json(['message' => 'API key is required'], 401);
         }
 
-        $user = User::where('api_key', $apiKey)->where('is_active', true)->first();
+        $user = Users::where('api_key', $apiKey)->where('is_active', true)->first();
 
         if (!$user) {
             return response()->json(['message' => 'Invalid API key'], 401);

@@ -18,6 +18,14 @@ class AuthController extends Controller
 
     public function register(Request $request): JsonResponse
     {
+        // Manual JSON parsing if needed
+        if ($request->header('Content-Type') === 'application/json' && empty($request->all())) {
+            $jsonInput = json_decode($request->getContent(), true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($jsonInput)) {
+                $request->merge($jsonInput);
+            }
+        }
+
         $rules = [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
@@ -62,15 +70,33 @@ class AuthController extends Controller
         }
     }
 
+    /**
+     * User authentication endpoint that returns JWT token and API key.
+     *
+     * @bodyParam email string required The user's email address. Example: test@example.com
+     * @bodyParam password string required The user's password. Example: password
+     * @response 200 scenario="success" {"message":"User successfully logged in","data":{"user":{"id":9,"name":"Test User","email":"testjwt@example.com"},"token":"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...","authorization":{"type":"bearer"},"api_key":"lk_d245bca1d1f77f96c34a971759c9f7be"}}
+     * @response 401 scenario="invalid_credentials" {"message":"Invalid credentials"}
+     * @response 403 scenario="inactive_user" {"message":"User is not active"}
+     */
     public function login(Request $request): JsonResponse
     {
+        // Manual JSON parsing if needed
+        if ($request->header('Content-Type') === 'application/json' && empty($request->all())) {
+            $jsonInput = json_decode($request->getContent(), true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($jsonInput)) {
+                $request->merge($jsonInput);
+            }
+        }
+
+
         $credentials = $request->only('email', 'password');
 
         if (!$token = JWTAuth::attempt($credentials)) {
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
-        $user = auth()->user();
+        $user = JWTAuth::user();
 
         if (!$user->is_active) {
             return response()->json(['message' => 'User is not active'], 403);
@@ -96,7 +122,7 @@ class AuthController extends Controller
 
     public function logout(Request $request): JsonResponse
     {
-        JwtAuth::logout();
+        JWTAuth::logout();
 
         return response()->json(['message' => 'Successfully logged out']);
     }
@@ -199,23 +225,27 @@ class AuthController extends Controller
             }
         );
         return $status === Password::PasswordReset
-            ? redirect()->route('login')->with('status',__(status))
-            : back()->withErrors(['email' => [__($status)]]);
+            ? response()->json(['message' => 'Password reset successful'])
+            : response()->json(['message' => 'Password reset failed'], 400);
     }
 
     public function generateApiKey(Request $request): JsonResponse
     {
-        $user = auth('api')->user();
-        
-        if (!$user) {
-            return response()->json(['message' => 'Unauthorized'], 401);
-        }
+        try {
+            $user = JWTAuth::user();
 
-        $apiKey = $user->generateApiKey();
+            if (!$user) {
+                return response()->json(['message' => 'Unauthorized'], 401);
+            }
+
+            $apiKey = $user->generateApiKey();
 
         return response()->json([
-            'message' => 'API key generated successfully',
-            'api_key' => $apiKey,
-        ]);
+                'message' => 'API key generated successfully',
+                'api_key' => $apiKey,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Failed to generate API key'], 500);
+        }
     }
 }
