@@ -13,13 +13,13 @@ return new class extends Migration
     {
         Schema::create('perfumes', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('outlet_id')->constrained()->onDelete('cascade');
             $table->string('name');
-            $table->string('brand')->nullable();
-            $table->string('scent_type')->nullable(); // e.g., floral, woody
-            $table->decimal('price', 10, 2);
-            $table->string('image_url')->nullable();
+            $table->text('note')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
+
+            $table->index(['outlet_id', 'is_active', 'name']);
         });
     }
 

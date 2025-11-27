@@ -11,14 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('services', function (Blueprint $table) {
+        Schema::create('discounts', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('outlet_id');
+            $table->foreignId('outlet_id')->constrained()->onDelete('cascade');
             $table->string('name');
-            $table->text('description')->nullable();
-            $table->decimal('price', 10, 2);
+            $table->enum('type', ['nominal', 'percent']);
+            $table->decimal('value', 12, 2);
+            $table->text('note')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
+
+            $table->index(['outlet_id', 'is_active']);
         });
     }
 
@@ -27,6 +30,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('services');
+        Schema::dropIfExists('discounts');
     }
 };

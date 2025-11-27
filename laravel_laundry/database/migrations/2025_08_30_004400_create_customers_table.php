@@ -11,15 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('outlets', function (Blueprint $table) {
+        Schema::create('customers', function (Blueprint $table) {
             $table->id();
-            $table->bigInteger('owner_id')->unsigned();
+            $table->foreignId('outlet_id')->constrained()->onDelete('cascade');
             $table->string('name');
-            $table->string('address')->nullable();
             $table->string('phone')->nullable();
             $table->string('email')->nullable();
+            $table->text('address')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
+
+            $table->index(['outlet_id', 'name']);
+            $table->index(['outlet_id', 'phone']);
+            $table->index(['outlet_id', 'email']);
+            $table->index(['outlet_id', 'is_active']);
         });
     }
 
@@ -28,6 +33,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('outlets');
+        Schema::dropIfExists('customers');
     }
 };

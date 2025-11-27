@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('order_items', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('order_id');
-            $table->unsignedBigInteger('service_variant_id');
+            $table->foreignId('order_id')->constrained()->onDelete('cascade');
+            $table->foreignId('service_variant_id')->constrained()->onDelete('cascade');
             $table->enum('unit', ['kg', 'pcs', 'meter']);
             $table->decimal('qty', 10, 2);
             $table->decimal('price_per_unit_snapshot', 12, 2);
@@ -22,9 +22,8 @@ return new class extends Migration
             $table->text('note')->nullable();
             $table->timestamps();
 
-            $table->index('order_id');
-            $table->foreign('order_id')->references('id')->on('orders')->onDelete('cascade');
-            $table->foreign('service_variant_id')->references('id')->on('service_variants')->onDelete('cascade');
+            // Indexes
+            $table->index(['order_id']);
         });
     }
 

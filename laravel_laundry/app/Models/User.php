@@ -3,13 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-
 use Tymon\JWTAuth\Contracts\JWTSubject;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 
-class User extends Authenticatable implements JWTSubject, MustVerifyEmail
+class User extends Authenticatable implements JWTSubject
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
@@ -22,12 +22,10 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     protected $fillable = [
         'name',
         'email',
+        'phone',
+        'address',
         'password',
         'is_active',
-        'phone',
-        'email_verified_at',
-        'remember_token',
-        'api_key',
     ];
 
     /**
@@ -49,38 +47,50 @@ class User extends Authenticatable implements JWTSubject, MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
             'is_active' => 'boolean',
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
+            'password' => 'hashed',
         ];
     }
 
+    public function outlets(): BelongsToMany
+    {
+        return $this->belongsToMany(Outlet::class, 'user_outlets')
+            ->withPivot(['role', 'permissions_json', 'is_active'])
+            ->withTimestamps();
+    }
+
+    public function userOutlets(): HasMany
+    {
+        return $this->hasMany(UserOutlet::class);
+    }
+
+    /**
+     * Get the identifier that will be stored in the subject claim of the JWT.
+     *
+     * @return mixed
+     */
     public function getJWTIdentifier()
     {
         return $this->getKey();
     }
 
-    // Return a key value array, containing any custom claims to be added to the JWT.
-    /** @return array<string, mixed> */
-
-    public function getJWTCustomClaims(): array
+    /**
+     * Return a key value array, containing any custom claims to be added to the JWT.
+     *
+     * @return array
+     */
+    public function getJWTCustomClaims()
     {
         return [];
     }
 
-    public function generateApiKey()
+    /**
+     * Get active user outlets with relationship data
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function userOutletsActive()
     {
-        $this->api_key = 'lk_' . bin2hex(random_bytes(30));
-        $this->save();
-
-        return $this->api_key;
-    }
-
-    public function outlets()
-    {
-        return $this->belongsToMany(Outlets::class, 'user_outlets', 'user_id', 'outlet_id')
-            ->withPivot('role', 'permission_json', 'is_active')
-            ->withTimestamps();
+        return $this->hasMany(UserOutlet::class)->where('is_active', true);
     }
 }

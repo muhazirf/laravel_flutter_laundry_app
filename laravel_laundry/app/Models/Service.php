@@ -5,31 +5,28 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class PaymentMethod extends Model
+class Service extends Model
 {
     use HasFactory;
 
-    public const CATEGORY_CASH = 'cash';
-
-    public const CATEGORY_TRANSFER = 'transfer';
-
-    public const CATEGORY_E_WALLET = 'e_wallet';
-
     protected $fillable = [
         'outlet_id',
-        'category',
         'name',
-        'logo',
-        'owner_name',
-        'tags',
+        'priority_score',
+        'process_steps_json',
         'is_active',
+    ];
+
+    protected $attributes = [
+        'process_steps_json' => '["cuci","kering","setrika"]',
     ];
 
     protected function casts(): array
     {
         return [
-            'tags' => 'array',
+            'process_steps_json' => 'array',
             'is_active' => 'boolean',
         ];
     }
@@ -37,5 +34,10 @@ class PaymentMethod extends Model
     public function outlet(): BelongsTo
     {
         return $this->belongsTo(Outlet::class);
+    }
+
+    public function serviceVariants(): HasMany
+    {
+        return $this->hasMany(ServiceVariant::class);
     }
 }

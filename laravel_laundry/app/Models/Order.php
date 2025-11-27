@@ -8,11 +8,24 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-class Orders extends Model
+class Order extends Model
 {
+    /** @use HasFactory<\Database\Factories\OrderFactory> */
     use HasFactory;
 
-    protected $table = 'orders';
+    public const STATUS_ANTRIAN = 'ANTRIAN';
+
+    public const STATUS_PROSES = 'PROSES';
+
+    public const STATUS_SIAP_DIAMBIL = 'SIAP_DIAMBIL';
+
+    public const STATUS_SELESAI = 'SELESAI';
+
+    public const STATUS_BATAL = 'BATAL';
+
+    public const PAYMENT_STATUS_UNPAID = 'UNPAID';
+
+    public const PAYMENT_STATUS_PAID = 'PAID';
 
     protected $fillable = [
         'outlet_id',
@@ -52,12 +65,12 @@ class Orders extends Model
 
     public function outlet(): BelongsTo
     {
-        return $this->belongsTo(Outlets::class);
+        return $this->belongsTo(Outlet::class);
     }
 
     public function customer(): BelongsTo
     {
-        return $this->belongsTo(Customers::class);
+        return $this->belongsTo(Customer::class);
     }
 
     public function paymentMethod(): BelongsTo
@@ -67,7 +80,7 @@ class Orders extends Model
 
     public function perfume(): BelongsTo
     {
-        return $this->belongsTo(Perfumes::class);
+        return $this->belongsTo(Perfume::class);
     }
 
     public function discount(): BelongsTo
@@ -87,16 +100,22 @@ class Orders extends Model
 
     public function orderItems(): HasMany
     {
-        return $this->hasMany(OrderItem::class, 'order_id');
+        return $this->hasMany(OrderItem::class);
+    }
+
+    // Alias for orderItems to match API resource expectations
+    public function items(): HasMany
+    {
+        return $this->orderItems();
     }
 
     public function statusHistories(): HasMany
     {
-        return $this->hasMany(OrderStatusHistory::class, 'order_id');
+        return $this->hasMany(OrderStatusHistory::class);
     }
 
     public function payment(): HasOne
     {
-        return $this->hasOne(Payment::class, 'order_id');
+        return $this->hasOne(Payment::class);
     }
 }

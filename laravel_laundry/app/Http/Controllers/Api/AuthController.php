@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
-use App\Models\Users as User;
+use App\Http\Requests\Api\V1\Auth\LoginRequest;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
@@ -12,8 +12,10 @@ use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Str;
 use Tymon\JWTAuth\Facades\JWTAuth;
+use App\Services\JWTClaimsService;
+use App\Services\RefreshTokenService;
 
-class AuthController extends Controller
+class AuthController extends BaseApiController
 {
 
     public function register(Request $request): JsonResponse
@@ -44,7 +46,7 @@ class AuthController extends Controller
         ];
 
         $request->validate($rules, $messages);
-    
+
         try {
             $user = User::create([
                 'name' => $request->name,
@@ -52,21 +54,27 @@ class AuthController extends Controller
                 'password' => Hash::make($request->password),
             ]);
 
-            $token = JWTAuth::fromUser($user);
-            $apiKey = $user->generateApiKey();
-            return response()->json([
-                'message' => 'User successfully registered',
-                'data' => [
-                    'user' => $user->makeHidden(['password', 'remember_token']),
-                    'token' => $token,
-                    'authorization' => [
-                        'type' => 'bearer',
-                    ],
-                    'api_key' => $apiKey,
-                ],
-            ], 201);
+            // Generate enhanced JWT with tenant context
+            $customClaims = JWTClaimsService::generateEnhancedClaims($user);
+            $enhancedToken = JWTAuth::customClaims($customClaims)->fromUser($user);
+
+            // Generate refresh token
+            $refreshToken = RefreshTokenService::generateRefreshToken($user);
+
+            return $this->created([
+                'user' => $user->makeHidden(['password', 'remember_token']),
+                'token' => $enhancedToken,
+                'refresh_token' => $refreshToken,
+                'token_type' => 'bearer',
+                'expires_in' => config('jwt.ttl') * 60, // seconds
+                'tenant' => [
+                    'current_outlet_id' => $customClaims['tenant']['current_outlet_id'],
+                    'available_outlets' => $customClaims['tenant']['available_outlets'],
+                    'primary_role' => $customClaims['tenant']['primary_role'],
+                ]
+            ], 'User successfully registered');
         } catch (\Exception $e) {
-            return response()->json(['message' => 'User registration failed', 'error' => $e->getMessage()], 500);
+            return $this->serverError('User registration failed', ['error' => $e->getMessage()]);
         }
     }
 
@@ -79,7 +87,7 @@ class AuthController extends Controller
      * @response 401 scenario="invalid_credentials" {"message":"Invalid credentials"}
      * @response 403 scenario="inactive_user" {"message":"User is not active"}
      */
-    public function login(Request $request): JsonResponse
+    public function login(LoginRequest $request): JsonResponse
     {
         // Manual JSON parsing if needed
         if ($request->header('Content-Type') === 'application/json' && empty($request->all())) {
@@ -92,102 +100,113 @@ class AuthController extends Controller
 
         $credentials = $request->only('email', 'password');
 
+        // 🔧 FIX: Authenticate dengan JWT attempt
         if (!$token = JWTAuth::attempt($credentials)) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
+            return $this->unauthorized('Invalid credentials');
         }
 
+        // 🔧 FIXED: Ambil user setelah successful authentication
         $user = JWTAuth::user();
 
         if (!$user->is_active) {
-            return response()->json(['message' => 'User is not active'], 403);
+            return $this->forbidden('User is not active');
         }
 
-        // Generate API key if user doesn't have one
-        if (!$user->api_key) {
-            $user->generateApiKey();
+        // Generate enhanced JWT with tenant context
+        $customClaims = JWTClaimsService::generateEnhancedClaims($user);
+        $enhancedToken = JWTAuth::customClaims($customClaims)->fromUser($user);
+
+        // Generate refresh token (optional, fallback if Redis not available)
+        try {
+            $refreshToken = RefreshTokenService::generateRefreshToken($user);
+        } catch (\Exception $e) {
+            $refreshToken = null;
+            // Log error but continue with access token only
+            \Log::warning('Refresh token generation failed: ' . $e->getMessage());
         }
 
-        return response()->json([
-            'message' => 'User successfully logged in',
-            'data' => [
-                'user' => $user->makeHidden(['password', 'remember_token']),
-                'token' => $token,
-                'authorization' => [
-                    'type' => 'bearer',
-                ],
-                'api_key' => $user->api_key,
-            ],
-        ]);
+        return $this->success([
+            'user' => $user->makeHidden(['password', 'remember_token']),
+            'token' => $enhancedToken,
+            'refresh_token' => $refreshToken,
+            'token_type' => 'bearer',
+            'expires_in' => config('jwt.ttl') * 60, // seconds
+            'tenant' => [
+                'current_outlet_id' => $customClaims['tenant']['current_outlet_id'],
+                'available_outlets' => $customClaims['tenant']['available_outlets'],
+                'primary_role' => $customClaims['tenant']['primary_role'],
+            ]
+        ], 'User successfully logged in');
     }
 
     public function logout(Request $request): JsonResponse
     {
-        JWTAuth::logout();
-
-        return response()->json(['message' => 'Successfully logged out']);
+        try {
+            $removeToken = JWTAuth::invalidate(JWTAuth::getToken());
+            return $this->success(null, 'Logout successful');
+        } catch (\Exception $e) {
+            return $this->error('Logout failed', ['error' => $e->getMessage()], null, 400);
+        }
     }
 
     public function refresh(): JsonResponse
     {
         try {
             $newToken = JWTAuth::refresh(JWTAuth::getToken());
-            return response()->json([
-                'message' => 'Token refreshed',
-                'data' => [
-                    'authorization' => [
+            return $this->success([
+                'authorization' => [
                     'token' => $newToken,
                     'type' => 'bearer',
                 ],
-                ],
-            ]);
+            ], 'Token refreshed');
         } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
-            return response()->json(['message' => 'Invalid token'], 401);
+            return $this->unauthorized('Invalid token');
         }
     }
 
     public function me(Request $request): JsonResponse
     {
-        return response()->json($request->user()->makeHidden(['password', 'remember_token']));
+        return $this->success($request->user()->makeHidden(['password', 'remember_token']), 'User profile retrieved successfully');
     }
 
-    public function sendEmailVerification(Request $request)
+    public function sendEmailVerification(Request $request): JsonResponse
     {
         $user = $request->user();
         if ($user->hasVerifiedEmail()) {
-            return response()->json(['message' => 'Email already verified'], 400);
+            return $this->error('Email already verified', null, null, 400);
         }
 
         $user->sendEmailVerificationNotification();
 
-        return response()->json(['message' => 'Verification email sent']);
+        return $this->success(null, 'Verification email sent');
     }
 
-    public function verifyEmail(Request $request)
+    public function verifyEmail(Request $request): JsonResponse
     {
         $user = $request->user();
         if ($user->hasVerifiedEmail()) {
-            return response()->json(['message' => 'Email already verified'], 400);
+            return $this->error('Email already verified', null, null, 400);
         }
 
         if ($user->markEmailAsVerified()) {
             event(new Verified($user));
         }
 
-        return response()->json(['message' => 'Email verified successfully']);
+        return $this->success(null, 'Email verified successfully');
     }
 
     public function forgotPassword(Request $request)
     {
-        $request->validate(['email' => 'required|email']);        
+        $request->validate(['email' => 'required|email']);
 
         $status = Password::sendResetLink(
             $request->only('email')
         );
 
         if ($status === Password::RESET_LINK_SENT) {
-            return response()->json(['message' => 'Password reset link sent']);
+            return $this->success(null, 'Password reset link sent');
         } else {
-            return response()->json(['message' => 'Unable to send reset link'], 500);
+            return $this->serverError('Unable to send reset link');
         }
     }
 
@@ -225,27 +244,78 @@ class AuthController extends Controller
             }
         );
         return $status === Password::PasswordReset
-            ? response()->json(['message' => 'Password reset successful'])
-            : response()->json(['message' => 'Password reset failed'], 400);
+            ? $this->success(null, 'Password reset successful')
+            : $this->error('Password reset failed', null, null, 400);
     }
 
-    public function generateApiKey(Request $request): JsonResponse
+    /**
+     * Refresh JWT token using refresh token
+     */
+    public function refreshToken(Request $request): JsonResponse
     {
-        try {
-            $user = JWTAuth::user();
+        $request->validate([
+            'refresh_token' => 'required|string'
+        ], [
+            'refresh_token.required' => 'Refresh token is required'
+        ]);
 
-            if (!$user) {
-                return response()->json(['message' => 'Unauthorized'], 401);
+        $refreshToken = $request->get('refresh_token');
+
+        // Validate refresh token
+        $tokenData = RefreshTokenService::validateRefreshToken($refreshToken);
+
+        if (!$tokenData) {
+            return $this->unauthorized('Invalid or expired refresh token');
+        }
+
+        try {
+            // Get user from token data
+            $user = User::find($tokenData['user_id']);
+
+            if (!$user || !$user->is_active) {
+                RefreshTokenService::revokeRefreshToken($refreshToken);
+                return $this->unauthorized('User not found or inactive');
             }
 
-            $apiKey = $user->generateApiKey();
+            // Generate new JWT with enhanced claims
+            $customClaims = JWTClaimsService::generateEnhancedClaims($user);
+            $newToken = JWTAuth::customClaims($customClaims)->fromUser($user);
 
-        return response()->json([
-                'message' => 'API key generated successfully',
-                'api_key' => $apiKey,
-            ]);
+            // Increment refresh token usage
+            RefreshTokenService::incrementUsage($refreshToken);
+
+            return $this->success([
+                'token' => $newToken,
+                'token_type' => 'bearer',
+                'expires_in' => config('jwt.ttl') * 60, // seconds
+                'tenant' => [
+                    'current_outlet_id' => $customClaims['tenant']['current_outlet_id'],
+                    'available_outlets' => $customClaims['tenant']['available_outlets'],
+                    'primary_role' => $customClaims['tenant']['primary_role'],
+                ]
+            ], 'Token refreshed successfully');
+
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Failed to generate API key'], 500);
+            return $this->serverError('Token refresh failed', ['error' => $e->getMessage()]);
         }
     }
-}
+
+    /**
+     * Revoke refresh token
+     */
+    public function revokeToken(Request $request): JsonResponse
+    {
+        $request->validate([
+            'refresh_token' => 'required|string'
+        ]);
+
+        $refreshToken = $request->get('refresh_token');
+
+        if (RefreshTokenService::revokeRefreshToken($refreshToken)) {
+            return $this->success(null, 'Refresh token revoked successfully');
+        }
+
+        return $this->error('Refresh token not found', null, null, 404);
+    }
+
+    }

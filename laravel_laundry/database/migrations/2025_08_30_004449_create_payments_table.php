@@ -13,21 +13,20 @@ return new class extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('order_id')->unique();
-            $table->unsignedBigInteger('method_id');
+            $table->foreignId('order_id')->unique()->constrained()->onDelete('cascade');
+            $table->foreignId('method_id')->constrained('payment_methods')->onDelete('cascade');
             $table->decimal('amount', 12, 2);
-            $table->dateTime('paid_at');
+            $table->datetime('paid_at');
             $table->string('ref_no')->nullable();
             $table->text('note')->nullable();
             $table->enum('status', ['SUCCESS', 'VOID'])->default('SUCCESS');
             $table->timestamps();
 
-            $table->index('order_id');
-            $table->index('method_id');
-            $table->index('paid_at');
-            $table->index('status');
-            $table->foreign('order_id')->references('id')->on('orders')->onDelete('cascade');
-            $table->foreign('method_id')->references('id')->on('payment_methods')->onDelete('cascade');
+            // Indexes
+            $table->index(['order_id']);
+            $table->index(['method_id']);
+            $table->index(['paid_at']);
+            $table->index(['status']);
         });
     }
 

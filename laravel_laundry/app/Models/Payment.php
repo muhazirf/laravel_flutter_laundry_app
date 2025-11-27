@@ -11,6 +11,10 @@ class Payment extends Model
     /** @use HasFactory<\Database\Factories\PaymentFactory> */
     use HasFactory;
 
+    public const STATUS_SUCCESS = 'SUCCESS';
+
+    public const STATUS_VOID = 'VOID';
+
     protected $fillable = [
         'order_id',
         'method_id',
@@ -31,7 +35,7 @@ class Payment extends Model
 
     public function order(): BelongsTo
     {
-        return $this->belongsTo(Orders::class);
+        return $this->belongsTo(Order::class);
     }
 
     public function paymentMethod(): BelongsTo

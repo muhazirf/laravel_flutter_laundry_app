@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api;
 
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 use App\Models\UserOutlets;
 use Illuminate\Http\JsonResponse;
 use App\Services\Api\V1\OutletService;
@@ -13,7 +12,7 @@ use App\Http\Resource\OutletResource;
 use Illuminate\Support\Str;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
-class OutletController extends Controller
+class OutletController extends BaseApiController
 {
     public function __construct(
         private OutletService $outletService,
@@ -37,10 +36,10 @@ class OutletController extends Controller
             return $outlet;
         });
 
-        return response()->json([
-            'message' => 'Daftar Outlet berhasil diambil',
-            'data' => OutletResource::collection($outlets)
-        ]);
+        return $this->success(
+            OutletResource::collection($outlets),
+            'Daftar Outlet berhasil diambil'
+        );
     }
 
     public function checkStatus(): JsonResponse
@@ -54,15 +53,12 @@ class OutletController extends Controller
 
         $isOutlet = $outletCount != 0 ? true : false;
 
-        return response()->json([
-            'data' => [
+        return $this->success([
                 'has_outlets' => $isOutlet,
                 'outlet_count' => $outletCount,
                 'show_manage_button' => !$isOutlet,
                 'user_id' => $user->id,
-            ],
-            'message' => 'Berhasil mendapatkan status outlet'
-        ]);
+            ], 'Berhasil mendapatkan status outlet');
     }
 
     public function getForFlutter(): JsonResponse
@@ -88,14 +84,11 @@ class OutletController extends Controller
             ];
         });
 
-        return response()->json([
-            "data" => [
+        return $this->success([
                 'outlets' => $outlets,
                 'total_count' => $outlets->count(),
                 'has_outlets' => $outlets->count() > 0,
                 'show_manage_button' => $outlets->count() === 0,
-            ],
-            "message" => "Daftar outlet berhasil diambil"
-        ]);
+            ], 'Daftar outlet berhasil diambil');
     }
 }

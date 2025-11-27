@@ -24,7 +24,7 @@ class PaymentMethodFactory extends Factory
         ];
 
         return [
-            'outlet_id' => \App\Models\Outlets::factory(),
+            'outlet_id' => \App\Models\Outlet::factory(),
             'category' => $category,
             'name' => fake()->randomElement($names[$category]),
             'logo' => fake()->imageUrl(100, 100, 'business'),

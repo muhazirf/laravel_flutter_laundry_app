@@ -2,16 +2,16 @@
 
 namespace App\Services\Api\V1;
 
-use App\Models\Users;
-use App\Models\Outlets;
-use App\Models\UserOutlets;
+use App\Models\User;
+use App\Models\Outlet;
+use App\Models\UserOutlet;
 use Exception;
 use App\Domain\OutletPermissions;
 use Illuminate\Support\Str;
 
-class OutletService
+class Outletervice
 {
-    public function createForOwner(Users $owner, array $data): Outlets
+    public function createForOwner(User $owner, array $data): Outlet
     {
         try {
             if (!$owner->is_active) {
@@ -21,17 +21,17 @@ class OutletService
             $outletData['owner_user_id'] = $owner->id;
             $outletData['is_active']     = $data['is_active'] ?? true;
 
-            $outlet = Outlets::create($outletData);
+            $outlet = Outlet::create($outletData);
 
-            $this->assignUser($outlet, $owner, UserOutlets::ROLE_OWNER);
+            $this->assignUser($outlet, $owner, UserOutlet::ROLE_OWNER);
 
-            return $outlet->load(['owner', 'userOutlets']);
+            return $outlet->load(['owner', 'userOutlet']);
         } catch (\Throwable $th) {
             throw new Exception('Failed to create Outlet');
         }
     }
 
-    public function assignUser(Outlets $outlet, Users $user, string $role, ?array $permOverride = null): UserOutlets
+    public function assignUser(Outlet $outlet, User $user, string $role, ?array $permOverride = null): UserOutlet
     {
         if (! $outlet->is_active) {
             throw new Exception('Cannot assign user to inactive outlet');
@@ -41,7 +41,7 @@ class OutletService
             throw new Exception('Cannot assign inactive user to outlet');
         }
 
-        if (! in_array($role, [UserOutlets::ROLE_OWNER, UserOutlets::ROLE_KARYAWAN], true)) {
+        if (! in_array($role, [UserOutlet::ROLE_OWNER, UserOutlet::ROLE_KARYAWAN], true)) {
             throw new Exception('Invalid role specified');
         }
 
@@ -52,7 +52,7 @@ class OutletService
         $finalPermissions = OutletPermissions::merge($basePermissions, $permOverride ?? []);
 
         // Upsert user outlet relationship
-        $userOutlet = UserOutlets::updateOrCreate(
+        $userOutlet = UserOutlet::updateOrCreate(
             [
                 'user_id' => $user->id,
                 'outlet_id' => $outlet->id,

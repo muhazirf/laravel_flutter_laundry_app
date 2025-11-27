@@ -6,30 +6,22 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Discount extends Model
+class Expense extends Model
 {
     use HasFactory;
 
-    public const TYPE_NOMINAL = 'nominal';
-
-    public const TYPE_PERCENT = 'percent';
-
     protected $fillable = [
         'outlet_id',
-        'name',
-        'type',
-        'value',
-        'note',
-        'is_active',
+        'kategori',
+        'amount',
+        'description',
+        'date',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'value' => 'decimal:2',
-            'is_active' => 'boolean',
-        ];
-    }
+    protected $casts = [
+        'amount' => 'decimal:2',
+        'date' => 'date',
+    ];
 
     public function outlet(): BelongsTo
     {

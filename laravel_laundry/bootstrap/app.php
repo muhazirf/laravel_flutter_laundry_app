@@ -16,7 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'api.key' => App\Http\Middleware\ApiKeyMiddleware::class,
+            'jwt.tenant' => App\Http\Middleware\JWTTenantMiddleware::class,
+            'permission' => App\Http\Middleware\HasPermissionMiddleware::class,
             'mcp.cors' => App\Http\Middleware\McpCors::class,
         ]);
 

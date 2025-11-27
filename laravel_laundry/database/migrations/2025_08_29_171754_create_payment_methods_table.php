@@ -11,17 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('service_variants', function (Blueprint $table) {
+        Schema::create('payment_methods', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('service_id');
+            $table->foreignId('outlet_id')->constrained()->onDelete('cascade');
+            $table->enum('category', ['cash', 'transfer', 'e_wallet']);
             $table->string('name');
-            $table->enum('unit', ['kg', 'pcs', 'meter']);
-            $table->decimal('price_per_unit', 12, 2);
-            $table->integer('tat_duration_hours')->default(24); // Turnaround time in hours
-            $table->text('note')->nullable();
-            $table->string('image_url')->nullable();
+            $table->string('logo')->nullable();
+            $table->string('owner_name')->nullable();
+            $table->json('tags')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
+
+            $table->index(['outlet_id', 'category', 'is_active']);
         });
     }
 
@@ -30,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('service_variants');
+        Schema::dropIfExists('payment_methods');
     }
 };

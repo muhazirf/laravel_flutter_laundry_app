@@ -29,10 +29,10 @@ class OrderStatusHistory extends Model
 
     public function order(): BelongsTo
     {
-        return $this->belongsTo(Orders::class);
+        return $this->belongsTo(Order::class);
     }
 
-    public function changedByUser(): BelongsTo
+    public function byUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'by_user_id');
     }

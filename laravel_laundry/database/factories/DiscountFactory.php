@@ -19,8 +19,8 @@ class DiscountFactory extends Factory
         $type = fake()->randomElement(['nominal', 'percent']);
 
         return [
-            'outlet_id' => \App\Models\Outlets::factory(),
-            'name' => fake()->words(2, true).' Discount',
+            'outlet_id' => \App\Models\Outlet::factory(),
+            'name' => fake()->words(2, true) . ' Discount',
             'type' => $type,
             'value' => $type === 'percent'
                 ? fake()->numberBetween(5, 30)

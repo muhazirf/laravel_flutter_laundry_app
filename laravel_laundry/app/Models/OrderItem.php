@@ -11,6 +11,12 @@ class OrderItem extends Model
     /** @use HasFactory<\Database\Factories\OrderItemFactory> */
     use HasFactory;
 
+    public const UNIT_KG = 'kg';
+
+    public const UNIT_PCS = 'pcs';
+
+    public const UNIT_METER = 'meter';
+
     protected $fillable = [
         'order_id',
         'service_variant_id',
@@ -32,11 +38,11 @@ class OrderItem extends Model
 
     public function order(): BelongsTo
     {
-        return $this->belongsTo(Orders::class);
+        return $this->belongsTo(Order::class);
     }
 
     public function serviceVariant(): BelongsTo
     {
-        return $this->belongsTo(ServiceVariants::class);
+        return $this->belongsTo(ServiceVariant::class);
     }
 }
