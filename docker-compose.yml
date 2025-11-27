@@ -8,7 +8,7 @@ services:
       - ./src:/src # Mount source code untuk init script
       - ./laravel_laundry:/var/www/html # Mount aplikasi Laravel
     ports:
-      - "8181:81" # Port 8000 di host ke port 80 di container
+      - "8181:80" # Port 8000 di host ke port 80 di container
     environment:
       DB_CONNECTION: mysql
       DB_HOST: mysql
@@ -31,7 +31,7 @@ services:
       MYSQL_USER: laravel
       MYSQL_PASSWORD: secret
     ports:
-      - "3310:3309"
+      - "3310:3306"
     volumes:
       - ./mysql_data:/var/lib/mysql
     networks:
@@ -44,7 +44,7 @@ services:
       - "8001:80"
     environment:
       PMA_HOST: mysql
-      PMA_PORT: 3309
+      PMA_PORT: 3306
       MYSQL_ROOT_PASSWORD: root
     depends_on:
       - mysql
